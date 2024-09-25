@@ -6,6 +6,7 @@ class NextPage extends StatefulWidget {
   const NextPage({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _NextPageState createState() => _NextPageState();
 }
 
@@ -74,36 +75,36 @@ class _NextPageState extends State<NextPage> {
                   width: 200,
                   fit: BoxFit.cover,
                 ),
-              SizedBox(height: 20),
+               const SizedBox(height: 20),
               Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Text(
                   _data,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16),
                 ),
               ),
               if (_recipeInstructions.isNotEmpty)
                 Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding:  const  EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                       const Text(
                         'Instrucciones de preparación:',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      SizedBox(height: 10),
+                      const  SizedBox(height: 10),
                       Text(
                         _recipeInstructions,
-                        style: TextStyle(fontSize: 14),
+                        style:  const TextStyle(fontSize: 14),
                       ),
                     ],
                   ),
                 ),
               ElevatedButton(
                 onPressed: _fetchRandomMeal,
-                child: Text('Obtener otra comida'),
+                child: const  Text('Obtener otra comida'),
               ),
             ],
           ),

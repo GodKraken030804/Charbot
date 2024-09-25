@@ -1,7 +1,7 @@
 import 'package:app_movil/Pages/NextPage.dart';
+import 'package:app_movil/Pages/ThirdPage.dart'; 
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart'; // Asegúrate de tener esta dependencia
-
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -48,17 +48,33 @@ class HomePage extends StatelessWidget {
           ),
           Container(
             width: double.infinity,
-            color: Colors.blue,
+            color: Colors.orange,
             child: TextButton(
               onPressed: () {
-                // Navegar a la página siguiente
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const NextPage()),
                 );
               },
               child: const Text(
-                'Continuar',
+                'Comidas Aleatorias',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+         
+          Container(
+            width: double.infinity,
+            color: Colors.orange, // Puedes cambiar el color si lo deseas
+            child: TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ThirdPage()),
+                );
+              },
+              child: const Text(
+                'Pagina De usuario',
                 style: TextStyle(color: Colors.white),
               ),
             ),
