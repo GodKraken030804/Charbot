@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({Key? key}) : super(key: key);
@@ -12,23 +13,46 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final List<Map<String, String>> _messages = [];
   final TextEditingController _controller = TextEditingController();
-
-  final String apiKey = 'AIzaSyB0wZHN5PiorXWoBw8VAt1982R3oEzdhXE';  // Reemplaza con tu API Key correcta
+  final String apiKey = 'AIzaSyB0wZHN5PiorXWoBw8VAt1982R3oEzdhXE'; // Reemplaza con tu API Key correcta.
   final String apiUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
-  // Llamada a la API de Gemini
+  @override
+  void initState() {
+    super.initState();
+    _loadChatHistory(); // Cargar el historial al iniciar.
+  }
+
+  // Cargar historial de conversación de SharedPreferences.
+  Future<void> _loadChatHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMessages = prefs.getStringList('chat_history') ?? [];
+    setState(() {
+      _messages.addAll(savedMessages
+          .map((message) => jsonDecode(message) as Map<String, String>)
+          .toList());
+    });
+  }
+
+  // Guardar historial de conversación en SharedPreferences.
+  Future<void> _saveChatHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encodedMessages =
+        _messages.map((message) => jsonEncode(message)).toList();
+    await prefs.setStringList('chat_history', encodedMessages);
+  }
+
+  // Llamada a la API de Gemini con el historial de conversación como contexto.
   Future<String?> _callGeminiAPI(String query) async {
+    final messagesForContext = _messages.map((msg) => msg['text']!).toList();
     final response = await http.post(
       Uri.parse('$apiUrl?key=$apiKey'),
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'contents': [
           {
             'parts': [
-              {'text': query}
+              {'text': messagesForContext.join('\n') + '\nUser: $query'}
             ]
           }
         ]
@@ -37,11 +61,7 @@ class _ChatPageState extends State<ChatPage> {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      print('Respuesta del servidor: $data');
-
-      // Extraer la respuesta del bot
-      final text = data['candidates']?[0]['content']?['parts']?[0]['text'] ?? 'Sin respuesta.';
-      return text;
+      return data['candidates']?[0]['content']?['parts']?[0]['text'] ?? 'Sin respuesta.';
     } else {
       print('Error: ${response.statusCode}');
       print('Body: ${response.body}');
@@ -49,7 +69,7 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  // Enviar mensaje y mostrar respuesta
+  // Enviar mensaje y actualizar historial.
   Future<void> _sendMessage(String message) async {
     if (message.trim().isEmpty) return;
 
@@ -63,6 +83,7 @@ class _ChatPageState extends State<ChatPage> {
       setState(() {
         _messages.add({'sender': 'bot', 'text': response});
       });
+      _saveChatHistory(); // Guardar el historial actualizado.
     }
   }
 
@@ -70,8 +91,8 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chatbot con Gemini API'),
-        backgroundColor: Colors.teal,
+        title: const Text('Chatbot'),
+        backgroundColor: Colors.yellow,
       ),
       body: Column(
         children: [
@@ -97,7 +118,7 @@ class _ChatPageState extends State<ChatPage> {
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.symmetric(vertical: 5),
               decoration: BoxDecoration(
-                color: isUserMessage ? Colors.teal : Colors.grey.shade300,
+                color: isUserMessage ? Colors.yellow : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -131,7 +152,7 @@ class _ChatPageState extends State<ChatPage> {
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.send),
-            color: Colors.teal,
+            color: Colors.yellow,
             onPressed: () => _sendMessage(_controller.text),
           ),
         ],
