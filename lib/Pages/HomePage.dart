@@ -107,7 +107,7 @@ class HomePage extends StatelessWidget {
             ),
           ),
           onPressed: () async {
-            const url = 'https://github.com/tu-repositorio';
+            const url = 'https://github.com/GodKraken030804/Charbot';
             if (await canLaunchUrl(Uri.parse(url))) {
               await launchUrl(Uri.parse(url));
             } else {

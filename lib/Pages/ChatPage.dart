@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({Key? key}) : super(key: key);
@@ -13,63 +14,95 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final List<Map<String, String>> _messages = [];
   final TextEditingController _controller = TextEditingController();
-  final String apiKey = 'AIzaSyB0wZHN5PiorXWoBw8VAt1982R3oEzdhXE'; // Reemplaza con tu API Key correcta.
+  bool _isConnected = true; // Control de conexión
+  final String apiKey = 'AIzaSyB0wZHN5PiorXWoBw8VAt1982R3oEzdhXE';
   final String apiUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
   @override
   void initState() {
     super.initState();
-    _loadChatHistory(); // Cargar el historial al iniciar.
+    _loadChatHistory();
+    _checkConnectivity();
+    _listenToConnectivityChanges();
   }
 
-  // Cargar historial de conversación de SharedPreferences.
+  @override
+  void dispose() {
+    Connectivity().onConnectivityChanged.drain();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // Verificar conectividad
+  Future<void> _checkConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    setState(() {
+      _isConnected = connectivityResult != ConnectivityResult.none;
+    });
+  }
+
+  // Escuchar cambios en la conectividad
+  void _listenToConnectivityChanges() {
+    Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+      setState(() {
+        _isConnected = result != ConnectivityResult.none;
+      });
+    });
+  }
+
+  // Cargar historial de conversación desde SharedPreferences
   Future<void> _loadChatHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final savedMessages = prefs.getStringList('chat_history') ?? [];
     setState(() {
-      _messages.addAll(savedMessages
-          .map((message) => jsonDecode(message) as Map<String, String>)
-          .toList());
+      _messages.clear(); // Limpiar mensajes existentes antes de cargar
+      _messages.addAll(
+        savedMessages.map((msg) => Map<String, String>.from(jsonDecode(msg))).toList(),
+      );
     });
   }
 
-  // Guardar historial de conversación en SharedPreferences.
+  // Guardar historial de conversación en SharedPreferences
   Future<void> _saveChatHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    final encodedMessages =
-        _messages.map((message) => jsonEncode(message)).toList();
+    final encodedMessages = _messages.map((msg) => jsonEncode(msg)).toList();
     await prefs.setStringList('chat_history', encodedMessages);
   }
 
-  // Llamada a la API de Gemini con el historial de conversación como contexto.
+  // Llamada a la API de Gemini
   Future<String?> _callGeminiAPI(String query) async {
     final messagesForContext = _messages.map((msg) => msg['text']!).toList();
-    final response = await http.post(
-      Uri.parse('$apiUrl?key=$apiKey'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'contents': [
-          {
-            'parts': [
-              {'text': messagesForContext.join('\n') + '\nUser: $query'}
-            ]
-          }
-        ]
-      }),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$apiUrl?key=$apiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {'text': messagesForContext.join('\n') + '\nUser: $query'}
+              ]
+            }
+          ]
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['candidates']?[0]['content']?['parts']?[0]['text'] ?? 'Sin respuesta.';
-    } else {
-      print('Error: ${response.statusCode}');
-      print('Body: ${response.body}');
-      return 'Error en la respuesta del servidor.';
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['candidates']?[0]['content']?['parts']?[0]['text'] ?? 'Sin respuesta.';
+      } else {
+        print('Error: ${response.statusCode}');
+        print('Body: ${response.body}');
+        return 'Error en la respuesta del servidor.';
+      }
+    } catch (e) {
+      print('Error en la llamada a la API: $e');
+      return 'Error de conexión.';
     }
   }
 
-  // Enviar mensaje y actualizar historial.
+  // Enviar mensaje y actualizar historial
   Future<void> _sendMessage(String message) async {
     if (message.trim().isEmpty) return;
 
@@ -78,20 +111,27 @@ class _ChatPageState extends State<ChatPage> {
       _controller.clear();
     });
 
-    final response = await _callGeminiAPI(message);
-    if (response != null) {
+    if (_isConnected) {
+      final response = await _callGeminiAPI(message);
+      if (response != null) {
+        setState(() {
+          _messages.add({'sender': 'bot', 'text': response});
+        });
+      }
+    } else {
       setState(() {
-        _messages.add({'sender': 'bot', 'text': response});
+        _messages.add({'sender': 'bot', 'text': 'No hay conexión a internet. Por favor, intenta más tarde.'});
       });
-      _saveChatHistory(); // Guardar el historial actualizado.
     }
+    
+    await _saveChatHistory(); // Guardar el historial después de cada mensaje
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chatbot'),
+        title: const Text('Mi Chatbot'),
         backgroundColor: Colors.yellow,
       ),
       body: Column(
@@ -124,7 +164,7 @@ class _ChatPageState extends State<ChatPage> {
               child: Text(
                 message['text'] ?? '',
                 style: TextStyle(
-                  color: isUserMessage ? Colors.white : Colors.black87,
+                  color: Colors.black87,
                 ),
               ),
             ),
@@ -146,14 +186,16 @@ class _ChatPageState extends State<ChatPage> {
                 hintText: 'Escribe un mensaje...',
                 border: OutlineInputBorder(),
               ),
-              onSubmitted: (value) => _sendMessage(value),
+              onSubmitted: _isConnected ? (value) => _sendMessage(value) : null,
             ),
           ),
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.send),
-            color: Colors.yellow,
-            onPressed: () => _sendMessage(_controller.text),
+            color: _isConnected ? Colors.yellow : Colors.grey,
+            onPressed: _isConnected
+                ? () => _sendMessage(_controller.text)
+                : null,
           ),
         ],
       ),
