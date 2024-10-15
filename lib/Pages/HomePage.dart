@@ -1,106 +1,132 @@
-import 'package:app_movil/Pages/NextPage.dart';
-import 'package:app_movil/Pages/ThirdPage.dart'; 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-
-  // Lista de integrantes del equipo
-  final List<Map<String, String>> teamMembers = const [
-    {"name": "Jorge Arturo Molina Gómez 221251", "phone": "967 680 07 60", "message": "967 680 0760"},
-    {"name": "Yoshtin German Gutierrez Perez 221246", "phone": "961 851 3478", "message": "961 851 3478"},
-    {"name": "Andres Guizar Gómez 213360", "phone": "963 171 8235", "message": "963 171 8235"},
-    {"name": "Yumari Teresa Morales Mendoza 2111225", "phone": "968 128 2169", "message": "968 128 2169"}
-  ];
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Integrantes del Equipo'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: teamMembers.length,
-              itemBuilder: (context, index) {
-                final member = teamMembers[index];
-                return ListTile(
-                  title: Text(member['name']!),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.phone),
-                        onPressed: () => _makePhoneCall(member['phone']!),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.message),
-                        onPressed: () => _sendSMS(member['message']!),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color.fromARGB(255, 255, 242, 0), Colors.white],
           ),
-          Container(
-            width: double.infinity,
-            color: Colors.orange,
-            child: TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const NextPage()),
-                );
-              },
-              child: const Text(
-                'Comidas Aleatorias',
-                style: TextStyle(color: Colors.white),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 50),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  _buildInfoCard(context),
+                  const SizedBox(height: 40),
+                  _buildActionButtons(context),
+                ],
               ),
             ),
           ),
-         
-          Container(
-            width: double.infinity,
-            color: Colors.orange, // Puedes cambiar el color si lo deseas
-            child: TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ThirdPage()),
-                );
-              },
-              child: const Text(
-                'Pagina De usuario',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // Método para hacer llamadas
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri callUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(callUri)) {
-      await launchUrl(callUri);
-    } else {
-      throw 'No se pudo realizar la llamada';
-    }
+  Widget _buildInfoCard(BuildContext context) {
+    return Card(
+      elevation: 12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(25),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: Image.asset(
+                'assets/logo_universidad.png',
+                height: 100,
+                width: 100,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Universidad Politécnica de Chiapas',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            const Divider(),
+            const SizedBox(height: 10),
+            _buildInfoText('Carrera: Ingeniería en Software'),
+            _buildInfoText('Materia: PROGRAMACIÓN PARA MÓVILES II'),
+            _buildInfoText('Grupo: B'),
+            _buildInfoText('Nombre: Jorge Arturo Molina Gómez'),
+            _buildInfoText('Matrícula: 221251'),
+          ],
+        ),
+      ),
+    );
   }
 
-  // Método para enviar SMS
-  Future<void> _sendSMS(String phoneNumber) async {
-    final Uri smsUri = Uri(scheme: 'sms', path: phoneNumber);
-    if (await canLaunchUrl(smsUri)) {
-      await launchUrl(smsUri);
-    } else {
-      throw 'No se pudo enviar el mensaje';
-    }
+  Widget _buildActionButtons(BuildContext context) {
+    return Column(
+      children: [
+        ElevatedButton.icon(
+          icon: const Icon(Icons.chat_bubble_outline),
+          label: const Text('Ir al Chat'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.yellow,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+            textStyle: const TextStyle(fontSize: 18),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
+          ),
+          onPressed: () {
+            Navigator.pushNamed(context, '/chat');
+          },
+        ),
+        const SizedBox(height: 15),
+        TextButton.icon(
+          icon: const Icon(Icons.code),
+          label: const Text('Ver Repositorio en GitHub'),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.blueAccent,
+            textStyle: const TextStyle(
+              fontSize: 16,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+          onPressed: () async {
+            const url = 'https://github.com/tu-repositorio';
+            if (await canLaunchUrl(Uri.parse(url))) {
+              await launchUrl(Uri.parse(url));
+            } else {
+              throw 'No se pudo abrir $url';
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoText(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 16, color: Colors.black54),
+        textAlign: TextAlign.center,
+      ),
+    );
   }
 }
